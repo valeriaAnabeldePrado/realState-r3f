@@ -1,5 +1,5 @@
 
-import React from 'react'
+import{ useRef, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -11,14 +11,43 @@ type GLTFResult = {
     [key: string]: THREE.Material
   }
 }
+interface ModelProps {
+  position?: number;
+  onPartHover: (partName:string)=> void;
+}
 
-export function Model(props: React.ComponentProps<'group'>) {
+export function Model({onPartHover, ...props}: ModelProps) {
   const gltf = useGLTF('/objetc.glb');
   const nodes = Object.fromEntries(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Object.entries(gltf.nodes).filter(([_, node]) => node instanceof THREE.Mesh)
   ) as GLTFResult['nodes'];
   const materials = gltf.materials as GLTFResult['materials'];
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  
+
+  useEffect(() => {
+    if (meshRef.current) {
+      const currentMaterial = meshRef.current.material;
+      const newMaterial = new THREE.MeshStandardMaterial({
+        color: "grey", // Mantener el color original
+        map: (currentMaterial as THREE.MeshStandardMaterial).map,     // Mantener la textura original (si existe)
+        // Puedes agregar más propiedades del MeshStandardMaterial aquí si lo deseas,
+        // como roughness, metalness, envMap, etc.
+      });
+      meshRef.current.material = newMaterial;
+      // Opcional: Disponer del material anterior si ya no lo necesitas
+      if (Array.isArray(currentMaterial)) {
+        currentMaterial.forEach((material) => {
+          if (material.dispose) {
+            material.dispose();
+          }
+        });
+      } else if (currentMaterial.dispose) {
+        currentMaterial.dispose();
+      }
+    }
+  }, [meshRef, materials]);
   return (
     <group {...props} dispose={null}>
       <group rotation={[Math.PI / 2, 0, 3.1]} scale={0.001}>
@@ -270,7 +299,15 @@ export function Model(props: React.ComponentProps<'group'>) {
               receiveShadow
               geometry={nodes['stellaj2_Material_#66_0'].geometry}
               material={materials.Material_66}
+               ref={meshRef}
               position={[-175.687, -115.645, -87.514]}
+              onPointerEnter={()=>{
+              onPartHover("stellaj")
+              }}
+              onPointerLeave={()=>{
+                onPartHover("")
+              }}
+
             />
           </group>
           <group position={[-308.5, 5011.286, 853.601]} scale={10}>

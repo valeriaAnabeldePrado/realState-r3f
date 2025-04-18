@@ -1,5 +1,4 @@
 
-import React from 'react'
 import{ useRef, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -12,8 +11,12 @@ type GLTFResult = {
     [key: string]: THREE.Material
   }
 }
+interface ModelProps {
+  position?: number;
+  onPartHover: (partName:string)=> void;
+}
 
-export function Model(props: React.ComponentProps<'group'>) {
+export function Model({onPartHover, ...props}: ModelProps) {
   const gltf = useGLTF('/objetc.glb');
   const nodes = Object.fromEntries(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,6 +24,7 @@ export function Model(props: React.ComponentProps<'group'>) {
   ) as GLTFResult['nodes'];
   const materials = gltf.materials as GLTFResult['materials'];
   const meshRef = useRef<THREE.Mesh | null>(null);
+  
 
   useEffect(() => {
     if (meshRef.current) {
@@ -297,6 +301,13 @@ export function Model(props: React.ComponentProps<'group'>) {
               material={materials.Material_66}
                ref={meshRef}
               position={[-175.687, -115.645, -87.514]}
+              onPointerEnter={()=>{
+              onPartHover("stellaj")
+              }}
+              onPointerLeave={()=>{
+                onPartHover("")
+              }}
+
             />
           </group>
           <group position={[-308.5, 5011.286, 853.601]} scale={10}>

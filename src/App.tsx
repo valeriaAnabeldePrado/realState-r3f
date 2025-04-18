@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { Model } from './model/Model';
 import gsap from "gsap";
 
+
 const Lights = React.memo(function Lights() {
     return (
         <>
@@ -29,50 +30,81 @@ const Lights = React.memo(function Lights() {
 function CameraAnimator({ targetPosition, lookAtPosition, controls }: {
     targetPosition: THREE.Vector3 | null;
     lookAtPosition: THREE.Vector3 | null;
-    controls: React.RefObject<typeof OrbitControls>;
+    controls: React.RefObject<OrbitControls>;
 }) {
     const { camera } = useThree();
 
     useEffect(() => {
         if (targetPosition && lookAtPosition && controls.current) {
-            const duration = 3; // Duración de la animación en segundos
-            const ease = "power3.out"; // Función de easing de GSAP
+            const duration = 3;
+            const ease = "power3.out";
 
+            // Mover la cámara exactamente a la posición del cubo
             gsap.to(camera.position, {
                 x: targetPosition.x,
                 y: 1.5,
                 z: targetPosition.z,
-                duration: duration,
-                ease: ease,
+                duration,
+                ease,
             });
 
-            gsap.to((controls.current as THREE.OrbitControls).target, {
+            // Mover el punto de orbita adelante del cubo
+            gsap.to(controls.current.target, { 
                 x: lookAtPosition.x,
                 y: lookAtPosition.y,
                 z: lookAtPosition.z,
-                duration: duration + 0.2, // Ligeramente diferente para un efecto más natural
-                ease: ease,
+                duration: duration + 0.2,
+                ease,
+                onUpdate: () => {
+                    if (controls.current) {
+                        controls.current.update();
+                    }
+                }
             });
         }
     }, [targetPosition, lookAtPosition, camera, controls]);
 
     return null;
 }
-
 function App() {
     const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
     const [lookAtPosition, setLookAtPosition] = useState<THREE.Vector3 | null>(null);
+    const [openModal, setOpenModal] = useState<string | null>(null)
+    
     const controlsRef = useRef<THREE.OrbitControls | null>(null);
+  
 
-    const handleClick = (event: ThreeEvent<MouseEvent>) => {
-        // 'event.point' contiene las coordenadas del punto de impacto en el objeto
-        setTargetPosition(new THREE.Vector3(event.point.x, event.point.y, event.point.z));
 
-        // Define el punto al que quieres que la cámara mire.
-        // Podrías ajustar estos valores según tu escena.
-        setLookAtPosition(new THREE.Vector3(0, 1.5, 0));
-    };
-console.log(targetPosition)
+const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!controlsRef.current) return;
+    
+    const camera = controlsRef.current.object;
+    
+    // Guardar la dirección actual de la cámara
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
+    
+    // Posición exacta del cubo (donde queremos que esté la cámara)
+    const cubePosition = new THREE.Vector3(event.point.x, 1.5, event.point.z);
+    
+    // Calcular el nuevo punto objetivo adelante del cubo en la dirección actual
+    // Usamos la misma dirección que ya tenía la cámara
+    const newTarget = new THREE.Vector3()
+        .copy(cubePosition)
+        .add(direction.multiplyScalar(0.2)); // El factor 2 determina qué tan lejos "mira" la cámara
+    
+    setTargetPosition(cubePosition);
+    setLookAtPosition(newTarget);
+};
+    
+    
+
+  
+
+    const handlePartName =(partname: string) => {
+        setOpenModal(partname)
+    }
+
     return (
         <>
             <div style={{ width: "100vw", height: "100vh" }}>
@@ -93,7 +125,7 @@ console.log(targetPosition)
                     }}
                 >
                     <Suspense fallback={null}>
-                        <Model position={0.1} />
+                        <Model position={0.1} onPartHover={handlePartName}/>
                         <Lights />
 
                         {/* Piso */}
@@ -107,6 +139,14 @@ console.log(targetPosition)
                             <boxGeometry args={[1, 1, 1]} />
                             <meshStandardMaterial color="#00ff00" />
                         </mesh>
+                        <mesh position={[0.5, 1, 4]} scale={0.2} castShadow onClick={handleClick}>
+                            <boxGeometry args={[1, 1, 1]} />
+                            <meshStandardMaterial color="#00ff00" />
+                        </mesh>
+                        <mesh position={[-1, 1, 4]} scale={0.2} castShadow onClick={handleClick}>
+                            <boxGeometry args={[1, 1, 1]} />
+                            <meshStandardMaterial color="#00ff00" />
+                        </mesh>
 
                         {/* Movimiento de cámara animado */}
                         <CameraAnimator
@@ -114,11 +154,18 @@ console.log(targetPosition)
                             lookAtPosition={lookAtPosition}
                             controls={controlsRef}
                         />
-                        <OrbitControls ref={(instance) => { controlsRef.current = instance as THREE.OrbitControls; }} />
+                       <OrbitControls ref={controlsRef} makeDefault />
                         <Environment preset="apartment" />
                     </Suspense>
                 </Canvas>
                 <Loader />
+                {openModal === "stellaj"&&(
+                    <div className="modal">
+                        <h2>Stellaj</h2>
+                        <p>Descripción de Stellaj</p>
+                       
+                    </div>
+                )}
             </div>
         </>
     );
